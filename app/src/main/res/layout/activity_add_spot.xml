@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".AddSpot">
+    tools:context=".activities.AddSpot">
 <androidx.appcompat.widget.Toolbar
     android:id="@+id/toolbar_add_spot"
     android:background="@color/colorPrimary"
