@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="spotty_margin">16dp</dimen>
+    <dimen name="main_padding" />
+    <dimen name="hintTextSize">16</dimen>
+    <dimen name="button_radius">10dp</dimen>
+</resources>
