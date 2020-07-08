@@ -159,11 +159,7 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
                 Long mySpotSuccess = databaseHandler.addSpot(spot);
 
                 if(mySpotSuccess>0){
-                    Toast.makeText(
-                            this,
-                            "Table worked!",
-                            Toast.LENGTH_SHORT
-                    ).show();
+                    setResult(Activity.RESULT_OK);
                     finish();
                 }
 

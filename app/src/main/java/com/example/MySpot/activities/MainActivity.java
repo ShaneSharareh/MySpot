@@ -1,9 +1,11 @@
 package com.example.MySpot.activities;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,7 +23,8 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-FloatingActionButton btnAddPlace;
+    private static final int ADD_SPOT_REQUEST_CODE = 1;
+    FloatingActionButton btnAddPlace;
 RecyclerView rvSpotsView;
 MySpotAdapter spotsAdapter;
 TextView emptyListGreeting;
@@ -46,10 +49,14 @@ TextView emptyListGreeting;
         spotsAdapter = new MySpotAdapter(this,spotsList);
         rvSpotsView.setAdapter(spotsAdapter);
 
+        /*spotsAdapter.setOnClickListener(new MySpotAdapter.OnClickListener){
+
+        };*/
+
     }
     private void startAddPage(){
        Intent intent = new Intent(this, AddSpot.class);
-        startActivity(intent);
+        startActivityForResult(intent, ADD_SPOT_REQUEST_CODE);
     }
 
     private void getSpotsListFromDB(){
@@ -68,5 +75,15 @@ TextView emptyListGreeting;
 
 
 
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == ADD_SPOT_REQUEST_CODE){
+            if(resultCode == Activity.RESULT_OK){
+                getSpotsListFromDB();
+            }
+        }
     }
 }
