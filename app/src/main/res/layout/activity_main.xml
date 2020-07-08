@@ -5,7 +5,21 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activities.MainActivity">
-
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_spots_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        tools:visibility="gone"/>
+    <TextView
+        android:id="@+id/tv_emptyspots"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Add your first favorite spot! "
+        android:textSize="16sp"
+        android:visibility="visible"
+        tools:visibility="visible"/>
     <!--<de.hdodenhof.circleimageview.CircleImageView
         xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/profile_image"

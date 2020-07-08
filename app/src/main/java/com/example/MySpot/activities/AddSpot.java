@@ -1,4 +1,4 @@
-package com.example.spotty.activities;
+package com.example.MySpot.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -15,7 +15,9 @@ import android.graphics.Bitmap;
 import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
@@ -25,7 +27,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.spotty.R;
+import com.example.MySpot.database.DatabaseHandler;
+import com.example.MySpot.models.Spot;
+import com.example.MySpot.R;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
@@ -50,20 +54,33 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
     private static final int CAMERA = 2;
     private static final String IMAGE_DIRECTORY = "SpotImages";
     //@Override
+    private EditText etTitle;
+    private EditText etDescription;
+    private EditText etLocation;
     public EditText etDate;
     private Calendar mCalendar = Calendar.getInstance();
     private DatePickerDialog.OnDateSetListener mOnDateSetListener;
     private TextView tvAddImage;
     private ImageView ivImage;
+    private Button saveSpot;
+    private double latitude = 0.0;
+    private double longtitude = 0.0;
+    private Uri savedImage = null;
+
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_spot);
         Toolbar mToolbar = (Toolbar) findViewById(R.id.toolbar_add_spot);
         setSupportActionBar(mToolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        etTitle = findViewById(R.id.etTitle);
+        etDescription = findViewById(R.id.etDescription);
+        etLocation = findViewById(R.id.etLocation);
         etDate = findViewById(R.id.etDate);
         tvAddImage = findViewById(R.id.tv_add_image);
         ivImage =  findViewById(R.id.iv_place_image);
+        saveSpot = findViewById(R.id.btn_save);
         mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -83,6 +100,7 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
         };
         etDate.setOnClickListener(this);
         tvAddImage.setOnClickListener(this);
+        saveSpot.setOnClickListener(this);
     }
 
     @Override
@@ -111,6 +129,46 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
             alert.show();
 
         }
+
+        if(view.getId()== R.id.btn_save){
+            if(etTitle.getText().length()==0){
+                Toast.makeText(this,"Please Enter title",Toast.LENGTH_SHORT).show();
+            }
+            else if(etDescription.getText().length()==0){
+                Toast.makeText(this,"Please Enter Description",Toast.LENGTH_SHORT).show();
+            }
+            else if(etLocation.getText().length()==0){
+                Toast.makeText(this,"Please Enter Location",Toast.LENGTH_SHORT).show();
+            }
+            else if(savedImage==null){
+                Toast.makeText(this,"Please Select an Image",Toast.LENGTH_SHORT).show();
+            }
+            else {
+                Spot spot = new Spot(
+                        0,
+                        etTitle.getText().toString(),
+                        savedImage.toString(),
+                        etDescription.getText().toString(),
+                        etDate.getText().toString(),
+                        etLocation.getText().toString(),
+                        latitude,
+                        longtitude
+                );
+
+                DatabaseHandler databaseHandler = new DatabaseHandler(this,"SpotDatabase",null,2);
+                Long mySpotSuccess = databaseHandler.addSpot(spot);
+
+                if(mySpotSuccess>0){
+                    Toast.makeText(
+                            this,
+                            "Table worked!",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                    finish();
+                }
+
+            }
+        }
     }
 
     @Override
@@ -122,7 +180,7 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
                     Uri contentURI =data.getData();
                     try{
                         Bitmap selectedImageBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), contentURI);
-                       saveImagesToStorage(selectedImageBitmap);
+                       savedImage = saveImagesToStorage(selectedImageBitmap);
                         ivImage.setImageBitmap(selectedImageBitmap);
                     } catch(IOException e){
                         e.printStackTrace();
