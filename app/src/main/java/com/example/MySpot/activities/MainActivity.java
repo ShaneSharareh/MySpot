@@ -59,7 +59,7 @@ TextView emptyListGreeting;
         startActivityForResult(intent, ADD_SPOT_REQUEST_CODE);
     }
 
-    private void getSpotsListFromDB(){
+    private void  getSpotsListFromDB(){
         DatabaseHandler databaseHandler = new DatabaseHandler(this,"SpotDatabase",null,2);
         ArrayList<Spot> spotList = new ArrayList<Spot>();
         spotList = databaseHandler.getSpots();
@@ -82,8 +82,12 @@ TextView emptyListGreeting;
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == ADD_SPOT_REQUEST_CODE){
             if(resultCode == Activity.RESULT_OK){
-                getSpotsListFromDB();
+                //getSpotsListFromDB();
             }
         }
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        getSpotsListFromDB();
     }
 }

@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activities.AddSpot">
+
 <androidx.appcompat.widget.Toolbar
     android:id="@+id/toolbar_add_spot"
     android:background="@color/colorPrimary"
@@ -76,6 +77,8 @@
                 android:id="@+id/etLocation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:focusable="false"
+                android:focusableInTouchMode="false"
                 android:layout_centerHorizontal="true"
                 android:layout_centerVertical="true"
                 android:layout_marginStart="8dp"

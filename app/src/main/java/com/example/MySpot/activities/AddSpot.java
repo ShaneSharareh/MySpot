@@ -12,17 +12,14 @@ import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
-import android.widget.Gallery;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,20 +27,26 @@ import android.widget.Toast;
 import com.example.MySpot.database.DatabaseHandler;
 import com.example.MySpot.models.Spot;
 import com.example.MySpot.R;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.model.RectangularBounds;
+import com.google.android.libraries.places.api.model.TypeFilter;
+import com.google.android.libraries.places.widget.Autocomplete;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
-import com.karumi.dexter.listener.PermissionDeniedResponse;
-import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
-import com.karumi.dexter.listener.single.PermissionListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -52,6 +55,7 @@ import java.util.Locale;
 public class AddSpot extends AppCompatActivity implements View.OnClickListener {
     private static final int GALLERY = 1;
     private static final int CAMERA = 2;
+    private static final int LOCATION_REQUEST_CODE = 3;
     private static final String IMAGE_DIRECTORY = "SpotImages";
     //@Override
     private EditText etTitle;
@@ -66,6 +70,7 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
     private double latitude = 0.0;
     private double longtitude = 0.0;
     private Uri savedImage = null;
+    private Spot mSpotDetails;
 
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +92,14 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
                 onBackPressed();
             }
         });
+        if(!Places.isInitialized()){
+            Log.v("Places","You Passed");
+            Places.initialize(getApplicationContext(),"AIzaSyC8gOgOBhE2ijCy9_VeRpgtwHMsm-EaYzc");
+        }
+        if(getIntent().hasExtra(SpotView.EDIT_SPOT_DETAIL)){
+            mSpotDetails = (Spot) getIntent().getSerializableExtra(SpotView.EDIT_SPOT_DETAIL);
+
+        }
         mOnDateSetListener = new DatePickerDialog.OnDateSetListener() {
             @Override
             public void onDateSet(DatePicker datePicker, int year, int month, int dayOfMonth) {
@@ -98,9 +111,29 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
 
 
         };
+        if(mSpotDetails != null){
+            getSupportActionBar().setTitle("EDIT SPOT");
+            etTitle.setText(mSpotDetails.getTitel());
+            etDescription.setText((mSpotDetails.getDescription()));
+            etDate.setText(mSpotDetails.getDate());
+            etLocation.setText(mSpotDetails.getLocation());
+            latitude = mSpotDetails.getLatitude();
+            longtitude = mSpotDetails.getLongitude();
+
+            savedImage = Uri.parse(mSpotDetails.getImage());
+
+            ivImage.setImageURI(savedImage);
+
+            saveSpot.setText("UPDATE");
+
+        }
+
         etDate.setOnClickListener(this);
         tvAddImage.setOnClickListener(this);
         saveSpot.setOnClickListener(this);
+        etLocation.setOnClickListener(this);
+
+
     }
 
     @Override
@@ -145,7 +178,7 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
             }
             else {
                 Spot spot = new Spot(
-                        0,
+                        mSpotDetails==null? 0: mSpotDetails.getId(),
                         etTitle.getText().toString(),
                         savedImage.toString(),
                         etDescription.getText().toString(),
@@ -156,12 +189,34 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
                 );
 
                 DatabaseHandler databaseHandler = new DatabaseHandler(this,"SpotDatabase",null,2);
-                Long mySpotSuccess = databaseHandler.addSpot(spot);
+                if(mSpotDetails ==null) {
+                    Long mySpotSuccess = databaseHandler.addSpot(spot);
 
-                if(mySpotSuccess>0){
-                    setResult(Activity.RESULT_OK);
-                    finish();
+                    if (mySpotSuccess > 0) {
+                        setResult(Activity.RESULT_OK);
+                        finish();
+                    }
+                }else{
+                    int mySpotSuccess = databaseHandler.updateSpot(spot);
+
+                    if (mySpotSuccess > 0) {
+                        setResult(Activity.RESULT_OK);
+                        finish();
+                    }
                 }
+            }
+        }
+
+        if(view.getId() == R.id.etLocation){
+            try{
+                List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.ADDRESS);
+                Intent intentBuilder = new Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN,fields)
+                        .setTypeFilter(TypeFilter.ESTABLISHMENT)
+                        //.setLocationBias( RectangularBounds.newInstance( new LatLng(-33.880490, 151.184363), new LatLng(-33.858754, 229596)))
+                        //.setCountries(Arrays.asList("BR","SR","GY"))
+                        .build(this);
+                startActivityForResult(intentBuilder,LOCATION_REQUEST_CODE);
+            }catch (Exception exception){
 
             }
         }
@@ -186,11 +241,20 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
                 }
             else if(requestCode == CAMERA){
                 Bitmap thumbnail = (Bitmap) data.getExtras().get("data");
-                saveImagesToStorage(thumbnail);
+                savedImage = saveImagesToStorage(thumbnail);
 
                 ivImage.setImageBitmap(thumbnail);
             }
+
+            else if(requestCode == LOCATION_REQUEST_CODE){
+                Place mPlace = Autocomplete.getPlaceFromIntent(data);
+                etLocation.setText(mPlace.getAddress());
+                latitude= mPlace.getLatLng().latitude;
+                longtitude = mPlace.getLatLng().longitude;
+            }
         }
+
+
 
     }
     private void choosePhotoFromGallery() {

@@ -73,6 +73,37 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return result;
     }
 
+    public int updateSpot(Spot spot){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Log.v("Check",spot.getTitel().toString());
+        Log.v("Check",spot.getDescription().toString());
+        Log.v("Check",spot.getDate().toString());
+        Log.v("Check",spot.getImage().toString());
+        Log.v("Check",spot.getLocation().toString());
+
+        ContentValues contentValues = new ContentValues();
+        //add values to columns
+        contentValues.put(TITLE, spot.getTitel());
+        contentValues.put(IMAGE, spot.getImage());
+        contentValues.put(DESCRIPTION, spot.getDescription());
+        contentValues.put(DATE, spot.getDate());
+        contentValues.put(LOCATION, spot.getLocation());
+        contentValues.put(LATITUDE, spot.getLatitude());
+        contentValues.put(LONGITUDE, spot.getLongitude());
+
+        int sucess = database.update(TABLE_MY_SPOT, contentValues, ID + "=" + spot.getId(),null);
+        //insert the row
+        database.close();
+        return sucess;
+    }
+
+    public int deleteSpot(Spot spot){
+        SQLiteDatabase database = this.getWritableDatabase();
+        int sucesss = database.delete(TABLE_MY_SPOT, ID + "=" + spot.getId(), null);
+        database.close();
+        return sucesss;
+    }
+
     public ArrayList<Spot> getSpots(){
         ArrayList<Spot> spotsList = new ArrayList<Spot>();
         String query = "SELECT * FROM "+ TABLE_MY_SPOT;

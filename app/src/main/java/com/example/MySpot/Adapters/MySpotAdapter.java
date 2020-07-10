@@ -1,5 +1,6 @@
 package com.example.MySpot.Adapters;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -18,6 +19,8 @@ import com.example.MySpot.models.Spot;
 import java.util.ArrayList;
 
 import androidx.recyclerview.widget.RecyclerView;
+
+import static androidx.core.app.ActivityCompat.startActivityForResult;
 
 public class MySpotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public static final String SPOT_DETAIL = "spot_details";
@@ -51,7 +54,6 @@ public class MySpotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                         Intent intent = new Intent(view.getContext(), SpotView.class);
                         intent.putExtra(SPOT_DETAIL, mSpotLists.get(position));
                         mContext.startActivity(intent);
-
                 }
             });
         }
