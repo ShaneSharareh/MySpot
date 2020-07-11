@@ -94,7 +94,7 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
         });
         if(!Places.isInitialized()){
             Log.v("Places","You Passed");
-            Places.initialize(getApplicationContext(),"AIzaSyC8gOgOBhE2ijCy9_VeRpgtwHMsm-EaYzc");
+            Places.initialize(getApplicationContext(),getString(R.string.google_maps_api_key));
         }
         if(getIntent().hasExtra(SpotView.EDIT_SPOT_DETAIL)){
             mSpotDetails = (Spot) getIntent().getSerializableExtra(SpotView.EDIT_SPOT_DETAIL);
