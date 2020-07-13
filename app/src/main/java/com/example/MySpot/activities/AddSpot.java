@@ -1,9 +1,13 @@
 package com.example.MySpot.activities;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
@@ -11,10 +15,18 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.location.Address;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.ResultReceiver;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -25,8 +37,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.MySpot.database.DatabaseHandler;
+import com.example.MySpot.models.KeyConstants;
 import com.example.MySpot.models.Spot;
 import com.example.MySpot.R;
+import com.example.MySpot.utilities.AddressCalculation;
+import com.example.MySpot.utilities.AddressListener;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationAvailability;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
@@ -51,11 +72,13 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 public class AddSpot extends AppCompatActivity implements View.OnClickListener {
     private static final int GALLERY = 1;
     private static final int CAMERA = 2;
     private static final int LOCATION_REQUEST_CODE = 3;
+    private static final int CURRENT_LOCATION_REQUEST_CODE = 4;
     private static final String IMAGE_DIRECTORY = "SpotImages";
     //@Override
     private EditText etTitle;
@@ -66,26 +89,31 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
     private DatePickerDialog.OnDateSetListener mOnDateSetListener;
     private TextView tvAddImage;
     private ImageView ivImage;
+    private Button btnCurrentLocation;
     private Button saveSpot;
     private double latitude = 0.0;
     private double longtitude = 0.0;
     private Uri savedImage = null;
     private Spot mSpotDetails;
-
+    private FusedLocationProviderClient fusedLocationProviderClient;
+    private ResultReceiver mResultReceiver;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_spot);
+        mResultReceiver = new AddressReciever(new Handler());
         Toolbar mToolbar = (Toolbar) findViewById(R.id.toolbar_add_spot);
         setSupportActionBar(mToolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         etTitle = findViewById(R.id.etTitle);
         etDescription = findViewById(R.id.etDescription);
         etLocation = findViewById(R.id.etLocation);
+        btnCurrentLocation = (Button) findViewById(R.id.btn_current_location);
         etDate = findViewById(R.id.etDate);
         tvAddImage = findViewById(R.id.tv_add_image);
         ivImage =  findViewById(R.id.iv_place_image);
         saveSpot = findViewById(R.id.btn_save);
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -130,6 +158,7 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
 
         etDate.setOnClickListener(this);
         tvAddImage.setOnClickListener(this);
+        btnCurrentLocation.setOnClickListener(this);
         saveSpot.setOnClickListener(this);
         etLocation.setOnClickListener(this);
 
@@ -206,7 +235,42 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
                 }
             }
         }
+        if(view.getId() == R.id.btn_current_location) {
+            if ((ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+                ActivityCompat.requestPermissions(AddSpot.this, new String[]{
+                                Manifest.permission.ACCESS_FINE_LOCATION},
+                        CURRENT_LOCATION_REQUEST_CODE);
+            } else {
+                getCurrentLocation();
+            }
+        }
+          /*  if(!checkLocationEnabled()){
+                Toast.makeText(
+                        this,
+                        "Your location provider is turned off. To use it, pleaase turn it off",
+                        Toast.LENGTH_SHORT
+                ).show();
+                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);
 
+            }else{
+              Dexter.withActivity(this).withPermissions(
+                      Manifest.permission.ACCESS_FINE_LOCATION,
+                      Manifest.permission.ACCESS_COARSE_LOCATION).withListener(new MultiplePermissionsListener(){
+
+                  @Override
+                  public void onPermissionsChecked(MultiplePermissionsReport report) {
+                      if(report.areAllPermissionsGranted()){
+                          locationDataRequest();
+                      }
+                  }
+
+                  @Override
+                  public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
+                    showRationalDialogForPermissions();
+                  }
+              }).onSameThread().check();
+                }*/
         if(view.getId() == R.id.etLocation){
             try{
                 List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.ADDRESS);
@@ -218,6 +282,19 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
                 startActivityForResult(intentBuilder,LOCATION_REQUEST_CODE);
             }catch (Exception exception){
 
+            }
+        }
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == CURRENT_LOCATION_REQUEST_CODE && grantResults.length>0){
+            if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                getCurrentLocation();
+            } else{
+                Toast.makeText(this, "Permission denied, turn on permissions!", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -298,17 +375,109 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
 
     }
 
+    @SuppressLint("MissingPermission")
+    private void getCurrentLocation(){
+        final LocationRequest locationRequest = new LocationRequest();
+        locationRequest.setInterval(10000);
+        locationRequest.setFastestInterval(3000);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        LocationServices.getFusedLocationProviderClient(AddSpot.this)
+                .requestLocationUpdates(locationRequest,new LocationCallback(){
+                    @Override
+                    public void onLocationResult(LocationResult locationResult) {
+                        super.onLocationResult(locationResult);
+                        LocationServices.getFusedLocationProviderClient(AddSpot.this)
+                                .removeLocationUpdates(this);
+                        if(locationResult != null && locationResult.getLocations().size()>0){
+                            int locationIndex = locationResult.getLocations().size()-1;
+                            latitude = locationResult.getLocations().get(locationIndex).getLatitude();
+                            longtitude = locationResult.getLocations().get(locationIndex).getLongitude();
+                            //etLocation.setText("Latitude is"+latitude + " and the longitutde is"+longtitude);
+                            Location location = new Location("providerNA");
+                            location.setLatitude(latitude);
+                            location.setLongitude(longtitude);
+                            calculateAdressFromLatLong(location);
 
+                        }
+                    }
+                }, Looper.getMainLooper());
+    }
+    private void calculateAdressFromLatLong(Location location){
+        Intent intent = new Intent(this, AddressCalculation.class);
+        intent.putExtra(KeyConstants.RECIEVER, mResultReceiver);
+        intent.putExtra(KeyConstants.LOCATION_EXTRA, location);
+        startService(intent);
+
+    }
+    private class AddressReciever extends ResultReceiver{
+
+        public AddressReciever(Handler handler) {
+            super(handler);
+        }
+
+        @Override
+        protected void onReceiveResult(int resultCode, Bundle resultData) {
+            super.onReceiveResult(resultCode, resultData);
+            if(resultCode == KeyConstants.SUCCESS_RESULT){
+
+                etLocation.setText(resultData.getString(KeyConstants.RESULT_KEY));
+            } else{
+                Toast.makeText(AddSpot.this, resultData.getString(KeyConstants.RESULT_KEY), Toast.LENGTH_SHORT).show();
+
+            }
+        }
+    }
     private void setDateInTextView(){
         String dateFromat = "dd-MM-yyyy";
         SimpleDateFormat mSimpleDateFormat = new SimpleDateFormat(dateFromat, Locale.getDefault());
         etDate.setText(mSimpleDateFormat.format(mCalendar.getTime()).toString());
     }
 
+    private Boolean checkLocationEnabled(){
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+    }
+    /*
+    *For Later
+        @SuppressLint("MissingPermission")
+        private void locationDataRequest(){
+            LocationRequest locationRequest = new LocationRequest();
+            locationRequest.setPriority(locationRequest.PRIORITY_HIGH_ACCURACY);
+            locationRequest.setInterval(1000);
+            locationRequest.setNumUpdates(1);
+
+            fusedLocationProviderClient.requestLocationUpdates(locationRequest,locationCallBack, Looper.myLooper());
+        }
+
+
+    private final LocationCallback locationCallBack = new LocationCallback() {
+        @Override
+        public void onLocationResult(LocationResult locationResult) {
+            super.onLocationResult(locationResult);
+            Location lastLocation = locationResult.getLastLocation();
+            latitude = lastLocation.getLatitude();
+            longtitude = lastLocation.getLongitude();
+            Log.i("Latlong", "" + latitude + " " + longtitude + "");
+            AddressCalculation addressTask = new AddressCalculation(AddSpot.this, latitude, longtitude);
+            AddressListener addressListener = new AddressListener();
+            addressTask.setAddressListener(addressListener);
+            //etLocation.setText(addressListener.getAddress());
+
+        }
+
+        @Override
+        public void onLocationAvailability(LocationAvailability locationAvailability) {
+            super.onLocationAvailability(locationAvailability);
+        }
+    };
+
+     */
+
     private Uri saveImagesToStorage(Bitmap bitmap){
         ContextWrapper wrapper = new ContextWrapper(getApplicationContext());
         File file = wrapper.getDir(IMAGE_DIRECTORY, Context.MODE_PRIVATE);
-        file = new File(file,"${UUID.randomUUID()}.jpg");
+        UUID randomImageID = UUID.randomUUID();
+        file = new File(file,randomImageID+".jpg");
 
         try{
             OutputStream outputStream = new FileOutputStream(file);
@@ -320,6 +489,7 @@ public class AddSpot extends AppCompatActivity implements View.OnClickListener {
         }
         return Uri.parse(file.getAbsolutePath());
     }
+
 
 
 }

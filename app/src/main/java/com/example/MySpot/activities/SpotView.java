@@ -21,6 +21,7 @@ public class SpotView extends AppCompatActivity {
     public static final String EDIT_SPOT_DETAIL = "Edit_Spot_Detail";
     ImageView ivSpotImage;
     TextView tvDescription;
+    TextView tvLocation;
     FloatingActionButton btnEditSpot;
     FloatingActionButton btnDeleteSpot;
     Button btnMap;
@@ -33,6 +34,7 @@ public class SpotView extends AppCompatActivity {
 
         ivSpotImage = (ImageView) findViewById(R.id.iv_view_spot_image);
         tvDescription = (TextView) findViewById(R.id.tv_view_description);
+        tvLocation = (TextView) findViewById(R.id.tv_view_location);
         btnEditSpot = (FloatingActionButton) findViewById(R.id.editSpot);
         btnDeleteSpot = (FloatingActionButton) findViewById(R.id.deleteSpot);
         btnMap = (Button) findViewById(R.id.btn_map);
@@ -70,6 +72,7 @@ public class SpotView extends AppCompatActivity {
             getSupportActionBar().setTitle(spotDetail.getTitel());
             ivSpotImage.setImageURI(Uri.parse(spotDetail.getImage()));
             tvDescription.setText(spotDetail.getDescription());
+            tvLocation.setText(spotDetail.getLocation());
             mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
