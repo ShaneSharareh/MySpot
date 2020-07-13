@@ -45,7 +45,7 @@ public class MySpotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
             if (holder instanceof MyViewHolder) {
                 ((ImageView) holder.itemView.findViewById(R.id.iv_spot_image)).setImageURI(Uri.parse(model.getImage()));
-                ( (TextView) holder.itemView.findViewById(R.id.tv_title) ).setText(model.getImage());
+                ( (TextView) holder.itemView.findViewById(R.id.tv_title) ).setText(model.getTitel());
                 ( (TextView) holder.itemView.findViewById(R.id.tv_description) ).setText(model.getDescription());
             }
             holder.itemView.setOnClickListener(new View.OnClickListener() {

@@ -1,3 +1,5 @@
 <resources>
+   <!-- Enter your google maps api key here -->
+    <string name="google_places_api_key">Place Your Google API Key Here</string>
 
 </resources>
